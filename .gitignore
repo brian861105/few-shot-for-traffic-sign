@@ -1,3 +1,9 @@
 dataset/
 
 .ipynb_checkpoints/
+
+__pycache__/
+
+GAN_test/dcgan_result/
+
+GAN_test/cgan_result/
