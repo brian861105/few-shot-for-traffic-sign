@@ -1,0 +1,6 @@
+shared_config = [["conv2d", [64, 3, 3, 3, 2, 0]], ["leakyrelu", [0.2, true]], ["bn", [64]], ["conv2d", [64, 64, 3, 3, 2, 0]], ["leakyrelu", [0.2, true]], ["bn", [64]]]
+nway_config = [["conv2d", [64, 3, 3, 3, 2, 0]], ["leakyrelu", [0.2, true]], ["bn", [64]], ["conv2d", [128, 64, 3, 3, 2, 0]], ["leakyrelu", [0.2, true]], ["bn", [128]], ["conv2d", [256, 128, 3, 3, 2, 0]], ["relu", [true]], ["bn", [256]], ["conv2d", [512, 256, 3, 3, 2, 0]], ["relu", [true]], ["bn", [512]], ["flatten", []], ["linear", [5, 8192]]]
+discriminator_config = [["conv2d", [64, 3, 3, 3, 2, 0]], ["leakyrelu", [0.2, true]], ["bn", [64]], ["conv2d", [64, 64, 3, 3, 2, 0]], ["leakyrelu", [0.2, true]], ["bn", [64]], ["conv2d", [64, 64, 3, 3, 2, 0]], ["leakyrelu", [0.2, true]], ["bn", [64]], ["conv2d", [64, 64, 2, 2, 1, 0]], ["leakyrelu", [0.2, true]], ["bn", [64]], ["flatten", []], ["linear", [1, 4096]]]
+gen_config = [["c_gan", [100, 512, 256, 7]], ["convt2d", [256, 128, 4, 4, 2, 1]], ["bn", [128]], ["relu", [true]], ["convt2d", [128, 64, 4, 4, 2, 1]], ["bn", [64]], ["relu", [true]], ["convt2d", [64, 32, 3, 3, 3, 0]], ["bn", [32]], ["relu", [true]], ["conv2d", [3, 32, 3, 3, 1, 1]]]
+learn_inner_lr = True
+condition_discrim = False

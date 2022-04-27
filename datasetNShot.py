@@ -55,7 +55,7 @@ class datasetNShot(data.Dataset):
                                                  ])
         
         self.data = glob.glob(f"{root}/{self.dataset_type}/*/*.jpg")
-        
+        self.root = root
         self.class_list = [x.split('/')[-2] for x in self.data]
         self.data = [x for x in self.data]
         self.img_dict = {}
@@ -161,11 +161,11 @@ class datasetNShot(data.Dataset):
         for i, path in enumerate(flatten_support_x):
             support_x[i] = self.transform(path)
 
-        # for i, path in enumerate(flatten_query_x):
-        #     query_x[i] = self.transform(path)
+        for i, path in enumerate(flatten_query_x):
+            query_x[i] = self.transform(path)
 
-        return support_x, torch.LongTensor(support_y_relative)
-        # return support_x, torch.LongTensor(support_y_relative), query_x, torch.LongTensor(query_y_relative)
+#         return support_x, torch.LongTensor(support_y_relative)
+        return support_x, torch.LongTensor(support_y_relative), query_x, torch.LongTensor(query_y_relative)
     def __len__(self):
 
         return self.batchsz

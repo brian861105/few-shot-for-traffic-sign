@@ -70,7 +70,7 @@ def train_data_generator(args):
 
 def test_data_generator(args):
     GTSRB_test = datasetNShot('dataset/GTSRB',
-                       batchsz=100,
+                       batchsz=5,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
                        k_shot=args["k_spt"],
@@ -80,7 +80,7 @@ def test_data_generator(args):
 
 
     DFG_test = datasetNShot('dataset/DFG',
-                       batchsz=100,
+                       batchsz=5,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
                        k_shot=args["k_spt"],
