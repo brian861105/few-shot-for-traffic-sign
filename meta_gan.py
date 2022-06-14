@@ -7,7 +7,7 @@ from    torch import optim
 import  numpy as np
 
 from    learner import Learner
-from    generator import Generator
+from    generator_2 import Generator
 from    copy import deepcopy
 from torch.autograd import Variable
 from conditioner import Conditioner
@@ -51,12 +51,9 @@ class MetaGAN(nn.Module):
         self.nway_net = Learner(nway_config, args["img_c"], args["img_sz"])
         self.discrim_net = Learner(discriminator_config, args["img_c"], args["img_sz"])
 
-        params = list(self.shared_net.parameters()) + list(self.nway_net.parameters()) + list(self.discrim_net.parameters())
-        params += list(self.generator.parameters())# + list(self.generator_reg.parameters())
-
         cuda = torch.cuda.is_available()
         self.FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor 
-
+        params = list()
         if self.learn_inner_lr:
             self.learned_lrs = []
             for i in range(self.update_steps):
@@ -69,11 +66,17 @@ class MetaGAN(nn.Module):
                 for param_list in self.learned_lrs[i]:
                     params += param_list
         
-        self.meta_optim = optim.Adam(params, lr=self.meta_lr)
-        
+        self.g_meta_optim = optim.Adam(self.generator.parameters(), lr=self.meta_lr)
+        self.n_meta_optim = optim.Adam(self.nway_net.parameters(), lr=self.meta_lr)
+        self.d_meta_optim = optim.Adam(self.discrim_net.parameters(), lr=self.meta_lr)
+        # self.meta_optim = optim.Adam(params,lr=self.meta_lr)
         if self.consine_schedule:
             
-            self.scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=self.meta_optim, T_max=self.total_epochs,
+            self.g_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=self.g_meta_optim, T_max=self.total_epochs,
+                                                                  eta_min=self.min_learning_rate)
+            self.n_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=self.n_meta_optim, T_max=self.total_epochs,
+                                                                  eta_min=self.min_learning_rate)
+            self.d_scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=self.d_meta_optim, T_max=self.total_epochs,
                                                                   eta_min=self.min_learning_rate)
         self.real_val = 1.0 # requires that real_val > fake_val
         self.fake_val = 0.0
@@ -94,15 +97,9 @@ class MetaGAN(nn.Module):
         # shared_layer = shared_net(x, vars=shared_weights, bn_training=True)
         discrim_logits = discrim_net(x, conditions=conditions, vars=discrim_weights, bn_training=True) if discrim else None
         class_logits = nway_net(x, vars=nway_weights, bn_training=True) if nway else None
-          
+
         return class_logits, discrim_logits
 
-    # Returns the number of correctly classified and discriminated examples.
-    # "real" indicates if we are using real examples or generated examples.
-    # "y" is the true classification of the examples.
-    # "weights" and "x" are used to generate predictions.
-    # If you don't pass in "weights" and "x", you should pass in "class_logits" and
-    # "descrim_preds", which are the predictions
 
     def get_num_corrects(self, real, y, x=None, weights=None, class_logits=None, discrim_logits=None, conditions=None):
         with torch.no_grad():
@@ -131,7 +128,6 @@ class MetaGAN(nn.Module):
 
         discrim_loss = F.binary_cross_entropy_with_logits(discrim_logits, y_discrim)
         return nway_loss, discrim_loss
-
     # gives the generator and discriminator loss
     def loss_wasserstein_gp(self, gen_discrim_logits, real_discrim_logits, x_gen, x_real, weights, conditions=None):
         batch_size = real_discrim_logits.shape[0]
@@ -195,7 +191,7 @@ class MetaGAN(nn.Module):
 
     def single_task_forward(self, x_spt, y_spt, x_qry, y_qry, nets=None, images=False):
         support_sz, c_, h, w = x_spt.size()
-        
+        qry_sz = x_spt.size(0)
         corrects = {key: np.zeros(self.update_steps + 1) for key in 
                         ["discrim_loss", # number of meta-test (query) images correctly discriminated
                         "q_nway", # number of meta-test (query) images correctly classified
@@ -316,13 +312,24 @@ class MetaGAN(nn.Module):
             corrects['gen_loss'][-1] += gen_loss.item()
 
         # meta-test loss
-        q_class_logits, _ = self.pred(x_qry, weights=net_weights, discrim=False)
-        loss_q = self.loss_cross_entropy(q_class_logits, y_qry) # doesn't use discrim loss
+        real_q_class_logits, real_q_discim_logits = self.pred(x_qry, weights=net_weights)
+        x_gen, y_gen = self.generator(x_spt, y_spt, vars=gen_weights, bn_training=False)
+        gen_q_class_logits, gen_q_discim_logits = self.pred(x_gen, weights=net_weights)
+        
+        real = Variable(self.FloatTensor(qry_sz, 1).fill_(self.real_val), requires_grad=False)
+        fake = Variable(self.FloatTensor(qry_sz, 1).fill_(self.fake_val), requires_grad=False)
+        
+        real_nway_loss, real_discrim_loss = self.loss_cross_entropy(real_q_class_logits, y_qry, real_discrim_logits, real)
+        gen_nway_loss, gen_discrim_loss = self.loss_cross_entropy(gen_class_logits, y_gen, gen_discrim_logits, fake)
 
+        n_loss_q = (gen_nway_loss + real_nway_loss) / 2
+        d_loss_q = (gen_discrim_loss + real_discrim_loss) / 2
+        g_loss_q = -1 * torch.nn.functional.logsigmoid(gen_discrim_logits).mean() #- gen_discrim_loss
+        
         if images:
-            return loss_q, corrects, x_gen
+            return g_loss_q, n_loss_q, d_loss_q, corrects, x_gen
         else:
-            return loss_q, corrects
+            return g_loss_q, n_loss_q, d_loss_q, corrects
 
 
     def forward(self, x_spt, y_spt, x_qry, y_qry):
@@ -338,7 +345,9 @@ class MetaGAN(nn.Module):
 
         if self.single_fast_test:
             tasks_per_batch = 1
-        loss_q = 0
+        g_loss_q = 0
+        n_loss_q = 0
+        d_loss_q = 0
         corrects = {key: np.zeros(self.update_steps + 1) for key in 
                         ["discrim_loss", # number of meta-test (query) images correctly discriminated
                         "q_nway", # number of meta-test (query) images correctly classified
@@ -346,21 +355,35 @@ class MetaGAN(nn.Module):
                         "gen_nway"]} # number of generated images correctly classified
         
         for i in range(tasks_per_batch):
-            loss_q_tmp, corrects_tmp = self.single_task_forward(x_spt[i], y_spt[i], x_qry[i], y_qry[i], images=False)
-            loss_q += loss_q_tmp
+            g_loss_q_tmp,n_loss_q_tmp,d_loss_q_tmp, corrects_tmp = self.single_task_forward(x_spt[i], y_spt[i], x_qry[i], y_qry[i], images=False)
+            g_loss_q += g_loss_q_tmp
+            n_loss_q += n_loss_q_tmp
+            d_loss_q += d_loss_q_tmp
+
             assert len(corrects_tmp.keys()) == len(corrects.keys())
             for key in corrects.keys():
                 corrects[key] += corrects_tmp[key]
 
         # end of all tasks
         # sum over final losses on query set across all tasks
-        loss_q /= tasks_per_batch
+        g_loss_q /= tasks_per_batch
+        n_loss_q /= tasks_per_batch
+        d_loss_q /= tasks_per_batch
 
         # optimize theta parameters
+        self.g_meta_optim.zero_grad()
+        g_loss_q.backward()
+        self.g_meta_optim.step()
+        
+        self.n_meta_optim.zero_grad()
+        n_loss_q.backward()
+        self.n_meta_optim.step()
+        
+        self.d_meta_optim.zero_grad()
+        d_loss_q.backward()
+        self.d_meta_optim.step()
         self.meta_optim.zero_grad()
-        loss_q.backward()
         self.meta_optim.step()
-
         accs = {}
         accs["q_nway"] = corrects["q_nway"] / (query_sz * tasks_per_batch)
         accs["discrim_loss"] = corrects["discrim_loss"]
@@ -406,17 +429,6 @@ class MetaGAN(nn.Module):
 
 
         return accs, imgs
-
-
-    # def save_model(path, step):
-    #     torch.save({
-    #         'epoch': step,
-    #         'params': params.state_dict(),
-    #         'optimizer_state_dict': self.meta_optim.state_dict(),
-    #         'loss': loss
-    #         }, path)
-
-
 
 def main():
     pass

@@ -1,9 +1,9 @@
-from .datasetNShot import datasetNShot
+from .dataset_tools import datasetNShot
 import torch
 
 def train_data_gen(args):
-    BelgiumTSC_train = datasetNShot('dataset/BelgiumTSC',
-                       batchsz=10000,
+    BelgiumTSC_train = datasetNShot('datasets/BelgiumTSC',
+                       batchsz=1000,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
                        k_shot=args["k_spt"],
@@ -12,8 +12,8 @@ def train_data_gen(args):
                        num_distractor=args["num_distractor"],
                        train=True)
 
-    ArTS_train = datasetNShot('dataset/ArTS',
-                       batchsz=10000,
+    ArTS_train = datasetNShot('datasets/ArTS',
+                       batchsz=1000,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
                        k_shot=args["k_spt"],
@@ -22,7 +22,7 @@ def train_data_gen(args):
                        num_distractor=args["num_distractor"],
                        train=True)
 
-    chinese_traffic_sign_train = datasetNShot('dataset/chinese_traffic_sign',
+    chinese_traffic_sign_train = datasetNShot('datasets/chinese_traffic_sign',
                        batchsz=1000,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
@@ -32,7 +32,7 @@ def train_data_gen(args):
                        num_distractor=args["num_distractor"],                                              
                        train=True)
 
-    CVL_train = datasetNShot('dataset/CVL',
+    CVL_train = datasetNShot('datasets/CVL',
                        batchsz=1000,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
@@ -42,7 +42,7 @@ def train_data_gen(args):
                        num_distractor=args["num_distractor"],                             
                        train=True)
 
-    FullJCNN_train = datasetNShot('dataset/FullJCNN2013',
+    FullJCNN_train = datasetNShot('datasets/FullJCNN2013',
                        batchsz=1000,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
@@ -52,7 +52,7 @@ def train_data_gen(args):
                        num_distractor=args["num_distractor"],                                  
                        train=True)
 
-    logo_train = datasetNShot('dataset/logo_2k',
+    logo_train = datasetNShot('datasets/logo_2k',
                        batchsz=1000,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
@@ -75,8 +75,8 @@ def train_data_gen(args):
 
 
 def test_data_gen(args):
-    GTSRB_test = datasetNShot('dataset/GTSRB',
-                       batchsz=100,
+    GTSRB_test = datasetNShot('datasets/GTSRB',
+                       batchsz=40,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
                        k_shot=args["k_spt"],
@@ -86,8 +86,8 @@ def test_data_gen(args):
                        train=False)
 
 
-    DFG_test = datasetNShot('dataset/DFG',
-                       batchsz=100,
+    DFG_test = datasetNShot('datasets/DFG',
+                       batchsz=40,
                        n_way=args["n_way"],
                        img_c=args["img_c"],
                        k_shot=args["k_spt"],

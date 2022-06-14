@@ -1,9 +1,13 @@
-dataset/
+datasets/
 
 .ipynb_checkpoints/
 
 __pycache__/
 
-GAN_test/dcgan_result/
+data/
 
-GAN_test/cgan_result/
+runs/
+
+save_models/
+
+

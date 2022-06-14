@@ -1,0 +1,33 @@
+{
+    "epoch":30000,
+    "n_way":5,
+    "k_spt":1,
+    "k_qry":5,
+    "img_sz":84,
+    "tasks_per_batch":1,
+    "img_c":3,
+    "meta_gen_lr":2e-3,
+    "meta_discrim_lr":2e-3,
+    "gen_update_lr":2e-3,
+    "update_lr": 2e-3,
+
+    "update_steps":4,
+    "update_steps_test":4,
+    "loss":"cross_entropy",
+    "min_learning_rate":1e-15,
+    "number_of_training_steps_per_iter":4,
+    "multi_step_loss_num_epochs":15,
+    "spy_gen_num":5,
+    "qry_gen_num":25,
+    "num_distractor":0,
+    "batch_for_gradient":50,
+
+    "no_save":0,
+    "learn_inner_lr":0,
+    "create_graph":0,
+    "msl":0,
+    "single_fast_test":0,
+    "consine_schedule":0,
+    
+    "save_path":"gen"
+}
