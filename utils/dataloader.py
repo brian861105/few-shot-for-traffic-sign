@@ -10,6 +10,8 @@ def train_data_gen(args):
                        k_query=args["k_qry"],
                        img_sz=args["img_sz"],
                        num_distractor=args["num_distractor"],
+                       spy_distractor_num=args["spy_distractor_num"],
+                       qry_distractor_num=args["qry_distractor_num"],
                        train=True)
 
     ArTS_train = datasetNShot('datasets/ArTS',
@@ -20,6 +22,8 @@ def train_data_gen(args):
                        k_query=args["k_qry"],
                        img_sz=args["img_sz"],
                        num_distractor=args["num_distractor"],
+                       spy_distractor_num=args["spy_distractor_num"],
+                       qry_distractor_num=args["qry_distractor_num"],
                        train=True)
 
     chinese_traffic_sign_train = datasetNShot('datasets/chinese_traffic_sign',
@@ -29,7 +33,9 @@ def train_data_gen(args):
                        k_shot=args["k_spt"],
                        k_query=args["k_qry"],
                        img_sz=args["img_sz"],
-                       num_distractor=args["num_distractor"],                                              
+                       num_distractor=args["num_distractor"],                       
+                       spy_distractor_num=args["spy_distractor_num"],
+                       qry_distractor_num=args["qry_distractor_num"],                                           
                        train=True)
 
     CVL_train = datasetNShot('datasets/CVL',
@@ -39,7 +45,9 @@ def train_data_gen(args):
                        k_shot=args["k_spt"],
                        k_query=args["k_qry"],
                        img_sz=args["img_sz"],
-                       num_distractor=args["num_distractor"],                             
+                       num_distractor=args["num_distractor"],                       
+                       spy_distractor_num=args["spy_distractor_num"],
+                       qry_distractor_num=args["qry_distractor_num"],                               
                        train=True)
 
     FullJCNN_train = datasetNShot('datasets/FullJCNN2013',
@@ -49,7 +57,9 @@ def train_data_gen(args):
                        k_shot=args["k_spt"],
                        k_query=args["k_qry"],
                        img_sz=args["img_sz"],
-                       num_distractor=args["num_distractor"],                                  
+                       num_distractor=args["num_distractor"],                       
+                       spy_distractor_num=args["spy_distractor_num"],
+                       qry_distractor_num=args["qry_distractor_num"],                                    
                        train=True)
 
     logo_train = datasetNShot('datasets/logo_2k',
@@ -59,7 +69,9 @@ def train_data_gen(args):
                        k_shot=args["k_spt"],
                        k_query=args["k_qry"],
                        img_sz=args["img_sz"],
-                       num_distractor=args["num_distractor"],                              
+                       num_distractor=args["num_distractor"],                       
+                       spy_distractor_num=args["spy_distractor_num"],
+                       qry_distractor_num=args["qry_distractor_num"],                                
                        train=True)
 
     train_data_generator = torch.utils.data.ConcatDataset([        
@@ -82,7 +94,9 @@ def test_data_gen(args):
                        k_shot=args["k_spt"],
                        k_query=args["k_qry"],
                        img_sz=args["img_sz"],
-                       num_distractor=args["num_distractor"],                              
+                       num_distractor=args["num_distractor"],                       
+                       spy_distractor_num=args["spy_distractor_num"],
+                       qry_distractor_num=args["qry_distractor_num"],                                
                        train=False)
 
 
@@ -93,7 +107,9 @@ def test_data_gen(args):
                        k_shot=args["k_spt"],
                        k_query=args["k_qry"],
                        img_sz=args["img_sz"],
-                       num_distractor=args["num_distractor"],                            
+                       num_distractor=args["num_distractor"],                       
+                       spy_distractor_num=args["spy_distractor_num"],
+                       qry_distractor_num=args["qry_distractor_num"],                              
                        train=False)
 
 

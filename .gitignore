@@ -10,4 +10,10 @@ runs/
 
 save_models/
 
+GAN_save_models/
 
+maml/
+
+metagan_runs/
+
+maml_runs/
