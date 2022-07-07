@@ -29,6 +29,6 @@
     "msl":0,
     "single_fast_test":0,
     "consine_schedule":0,
-    "fm":42,
-    "save_path":"42fm"
+    "fm":32,
+    "save_path":"distractor5"
 }

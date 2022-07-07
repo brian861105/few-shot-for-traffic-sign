@@ -20,9 +20,9 @@
     "num_distractor":2,
     "gan":1,
     "spy_distractor_num":1,
-    "qry_distractor_num":5,
+    "qry_distractor_num":15,
     "batch_for_gradient":25,
-
+    "fm":32,
     "no_save":0,
     "learn_inner_lr":0,
     "create_graph":0,

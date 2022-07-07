@@ -16,19 +16,19 @@
     "number_of_training_steps_per_iter":4,
     "multi_step_loss_num_epochs":15,
     "spy_gan_num":1,
-    "qry_gan_num":5,
+    "qry_gan_num":15,
     "num_distractor":2,
     "gan":1,
     "spy_distractor_num":1,
-    "qry_distractor_num":5,
+    "qry_distractor_num":15,
     "batch_for_gradient":25,
-
+    "fm":32,
     "no_save":0,
     "learn_inner_lr":0,
     "create_graph":0,
     "msl":0,
     "single_fast_test":0,
     "consine_schedule":0,
-    "fm":42,
-    "save_path":"42fm"
+
+    "save_path":"GAN15"
 }
