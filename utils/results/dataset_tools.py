@@ -11,16 +11,16 @@ import time
 class gaussian_noise(object):
     
     def __init__(self,mean=0,sigma=0.1):
-        self.mean = mean
-        self.sigma = sigma
+        self.mean = np.random.uniform(0,0.25)
+        self.sigma = np.random.uniform(0.1,0.01)
         
     def __call__(self,img):
-        
-        img = np.array(img)
-        h,w,c = img.shape
-        
-        img = img / 255 # int -> float (標準化)
+       
         if np.random.randint(0,2):
+            img = np.array(img) / 255.
+
+            h,w,c = img.shape
+
             noise = np.random.normal(self.mean, self.sigma, img.shape) # 隨機生成高斯 noise (float + float)
             # noise + 原圖
             gaussian_out = img + noise
@@ -30,14 +30,16 @@ class gaussian_noise(object):
             # 原圖: float -> int (0~1 -> 0~255)
             gaussian_out = np.uint8(gaussian_out*255)
             # noise: float -> int (0~1 -> 0~255)
+            gaussian_out = Image.fromarray(gaussian_out, 'RGB')
+        
+            return gaussian_out
         else:
-            noise = img
-        gaussian_out = np.uint8(noise*255)
+            return img
     
-        return gaussian_out
+        
 class datasetNShot(data.Dataset):
 
-    def __init__(self, root, batchsz, n_way, k_shot, k_query,img_c, img_sz,num_distractor,spy_distractor_num,qry_distractor_num ,train = False):
+    def __init__(self, root, batchsz, n_way, k_shot, k_query,img_c, img_sz,num_distractor,spy_distractor_num,qry_distractor_num ,data_augmentation_num ,train = False):
         """
         Different from mnistNShot, the
         :param root:
@@ -57,6 +59,7 @@ class datasetNShot(data.Dataset):
         self.k_shot = k_shot
         self.k_query = k_query
         self.querysz = self.n_way * self.k_query 
+        self.data_augmentation_num = data_augmentation_num
         self.setsz = self.n_way * self.k_shot
         self.num_distractor = num_distractor
         self.spy_distractor_num = spy_distractor_num
@@ -68,11 +71,16 @@ class datasetNShot(data.Dataset):
         else:
             self.dataset_type = "test"
         if train == True:
+            self.origin_transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
+                                                 transforms.Resize((self.resize, self.resize)),
+                                                 transforms.ToTensor(),
+                                                 # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                                                 ])
             self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
                                                  # transforms.FiveCrop(self.resize),
                                                  transforms.Resize((self.resize, self.resize)),
-                                                 # gaussian_noise(mean=0.485,sigma=0.0001),
-                                                 # lambda x: Image.fromarray(x, 'RGB'),
+                                                 gaussian_noise(mean=0,sigma=0.1),
                                                  # transforms.RandomHorizontalFlip(),
                                                  transforms.RandomRotation(5),
                                                  transforms.ToTensor(),
@@ -80,10 +88,16 @@ class datasetNShot(data.Dataset):
                                                  transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                                  ])
         else:
-            self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
+            self.origin_transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
                                                  transforms.Resize((self.resize, self.resize)),
                                                  transforms.ToTensor(),
                                                  # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                                                 ])
+            self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
+
+                                                 transforms.Resize((self.resize, self.resize)),
+                                                 transforms.ToTensor(),
                                                  transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                                  ])
         
@@ -215,15 +229,36 @@ class datasetNShot(data.Dataset):
         # relative means the label ranges from 0 to n-way
         support_y_relative = np.zeros(self.setsz)
         query_y_relative = np.zeros(self.querysz)
+        
+
+
         for idx, l in enumerate(unique):
             support_y_relative[support_y == l] = idx
             query_y_relative[query_y == l] = idx
+            
+        i = 0
+        support_x = support_x.repeat(self.data_augmentation_num+1,1,1,1)
 
-        for i, path in enumerate(flatten_support_x):
-            support_x[i] = self.transform(path)
+        for idx in range(self.data_augmentation_num+1):
+
+            if idx == 0:
+                for _, path in enumerate(flatten_support_x):
+                    support_x[i] = self.origin_transform(path)
+
+                    i = i + 1
+
+            else:
+                for _, path in enumerate(flatten_support_x):
+
+                    support_x[i] = self.transform(path)
+                    i = i + 1
+
+
+        support_y_relative = np.tile(support_y_relative,self.data_augmentation_num+1)
 
         for i, path in enumerate(flatten_query_x):
-            query_x[i] = self.transform(path)
+            query_x[i] = self.origin_transform(path)
+
 
         # unlabel
         # [setsz, 3, resize, resize]
@@ -237,12 +272,26 @@ class datasetNShot(data.Dataset):
 
             flatten_unlabel_query_x = [item
                                for sublist in self.unlabel_query_x_batch[index] for item in sublist]
+            i = 0
+            unlabel_support_x = unlabel_support_x.repeat(self.data_augmentation_num+1,1,1,1)
+            for idx in range(self.data_augmentation_num+1):
 
-            for i, path in enumerate(flatten_unlabel_support_x):
-                unlabel_support_x[i] = self.transform(path)
+                if idx == 0:
+                    for _, path in enumerate(flatten_unlabel_support_x):
+                        unlabel_support_x[i] = self.origin_transform(path)
+
+                        i = i + 1
+
+                else:
+                    for _, path in enumerate(flatten_unlabel_support_x):
+
+                        unlabel_support_x[i] = self.transform(path)
+                        i = i + 1
 
             for i, path in enumerate(flatten_unlabel_query_x):
-                unlabel_query_x[i] = self.transform(path)      
+                unlabel_query_x[i] = self.origin_transform(path)
+                
+
         if self.num_distractor:
             return support_x, torch.LongTensor(support_y_relative), query_x, torch.LongTensor(query_y_relative),unlabel_support_x, unlabel_query_x
         else:

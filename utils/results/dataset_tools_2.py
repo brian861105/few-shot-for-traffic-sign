@@ -11,16 +11,16 @@ import time
 class gaussian_noise(object):
     
     def __init__(self,mean=0,sigma=0.1):
-        self.mean = mean
-        self.sigma = sigma
+        self.mean = np.random.uniform(0,0.25)
+        self.sigma = np.random.uniform(0.1,0.01)
         
     def __call__(self,img):
-        
-        img = np.array(img)
-        h,w,c = img.shape
-        
-        img = img / 255 # int -> float (標準化)
+       
         if np.random.randint(0,2):
+            img = np.array(img) / 255.
+
+            h,w,c = img.shape
+
             noise = np.random.normal(self.mean, self.sigma, img.shape) # 隨機生成高斯 noise (float + float)
             # noise + 原圖
             gaussian_out = img + noise
@@ -30,14 +30,17 @@ class gaussian_noise(object):
             # 原圖: float -> int (0~1 -> 0~255)
             gaussian_out = np.uint8(gaussian_out*255)
             # noise: float -> int (0~1 -> 0~255)
+            gaussian_out = Image.fromarray(gaussian_out, 'RGB')
+        
+            return gaussian_out
         else:
-            noise = img
-        gaussian_out = np.uint8(noise*255)
+            return img
+
     
-        return gaussian_out
+        
 class datasetNShot(data.Dataset):
 
-    def __init__(self, root, batchsz, n_way, k_shot, k_query,img_c, img_sz,num_distractor,spy_distractor_num,qry_distractor_num ,train = False):
+    def __init__(self, root, batchsz, n_way, k_shot, k_query,img_c, img_sz,num_distractor,spy_distractor_num,qry_distractor_num ,data_augmentation_num ,train = False):
         """
         Different from mnistNShot, the
         :param root:
@@ -57,6 +60,7 @@ class datasetNShot(data.Dataset):
         self.k_shot = k_shot
         self.k_query = k_query
         self.querysz = self.n_way * self.k_query 
+        self.data_augmentation_num = data_augmentation_num
         self.setsz = self.n_way * self.k_shot
         self.num_distractor = num_distractor
         self.spy_distractor_num = spy_distractor_num
@@ -68,11 +72,16 @@ class datasetNShot(data.Dataset):
         else:
             self.dataset_type = "test"
         if train == True:
+            self.origin_transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
+                                                 transforms.Resize((self.resize, self.resize)),
+                                                 transforms.ToTensor(),
+                                                 # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                                                 ])
             self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
                                                  # transforms.FiveCrop(self.resize),
                                                  transforms.Resize((self.resize, self.resize)),
-                                                 # gaussian_noise(mean=0.485,sigma=0.0001),
-                                                 # lambda x: Image.fromarray(x, 'RGB'),
+                                                 gaussian_noise(mean=0,sigma=0.1),
                                                  # transforms.RandomHorizontalFlip(),
                                                  transforms.RandomRotation(5),
                                                  transforms.ToTensor(),
@@ -80,10 +89,18 @@ class datasetNShot(data.Dataset):
                                                  transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                                  ])
         else:
-            self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
+            self.origin_transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
                                                  transforms.Resize((self.resize, self.resize)),
                                                  transforms.ToTensor(),
                                                  # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                                                 transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                                                 ])
+            self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
+
+                                                 transforms.Resize((self.resize, self.resize)),
+                                                 gaussian_noise(mean=0,sigma=0.1),
+                                                 transforms.RandomRotation(5),
+                                                 transforms.ToTensor(),
                                                  transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                                                  ])
         
@@ -146,12 +163,12 @@ class datasetNShot(data.Dataset):
                 # 2. select k_shot + k_query for each class
                 if len(self.img_dict[cls]) >= (self.k_shot + self.k_query):
                     selected_imgs_idx = np.random.choice(len(self.img_dict[cls]), self.k_shot + self.k_query, False)
+                    indexDtrain = np.array(selected_imgs_idx[:self.k_shot])
+                    indexDtest = np.array(selected_imgs_idx[self.k_shot:])
                 else:
                     selected_imgs_idx = np.random.choice(len(self.img_dict[cls]), len(self.img_dict[cls]), False)
-                    resample_selected_imgs_idx = np.random.choice(selected_imgs_idx[self.k_shot:],self.k_shot + self.k_query - len(selected_imgs_idx),False)
-                    selected_imgs_idx = np.concatenate((selected_imgs_idx,resample_selected_imgs_idx),axis=0)
-                indexDtrain = np.array(selected_imgs_idx[:self.k_shot])
-                indexDtest = np.array(selected_imgs_idx[self.k_shot:])
+                    indexDtest = np.array(selected_imgs_idx[-self.k_query:])
+                    indexDtrain = np.array(selected_imgs_idx[:-self.k_query])
                 support_x.append(
                     np.array(self.img_dict[cls])[indexDtrain].tolist())
                 query_x.append(
@@ -159,17 +176,20 @@ class datasetNShot(data.Dataset):
                 support_y.append([cls for _ in indexDtrain])
                 
             random.shuffle(support_x)
-            random.shuffle(query_x)                
+            random.shuffle(query_x)
             if self.num_distractor:
                 for idx,cls in enumerate(unlabel_cls):
                     if len(self.img_dict[cls]) >= (self.spy_distractor_num + self.qry_distractor_num):
                         selected_imgs_idx = np.random.choice(len(self.img_dict[cls]), self.spy_distractor_num + self.qry_distractor_num, False)
+                        indexDtrain = np.array(selected_imgs_idx[:self.spy_distractor_num])
+                        indexDtest = np.array(selected_imgs_idx[self.spy_distractor_num:])
                     else:
                         selected_imgs_idx = np.random.choice(len(self.img_dict[cls]), len(self.img_dict[cls]), False)
-                        resample_selected_imgs_idx = np.random.choice(selected_imgs_idx[self.spy_distractor_num:],self.spy_distractor_num + self.qry_distractor_num - len(selected_imgs_idx),False)
-                        selected_imgs_idx = np.concatenate((selected_imgs_idx,resample_selected_imgs_idx),axis=0)
-                    indexDtrain = np.array(selected_imgs_idx[:self.spy_distractor_num])
-                    indexDtest = np.array(selected_imgs_idx[self.spy_distractor_num:])
+                        
+                        indexDtest = np.array(selected_imgs_idx[-self.qry_distractor_num:])
+                        indexDtrain = np.array(selected_imgs_idx[:-self.qry_distractor_num])
+
+                    
                     unlabel_support_x.append(
                         np.array(self.img_dict[cls])[indexDtrain].tolist())
                     unlabel_query_x.append(
@@ -211,19 +231,49 @@ class datasetNShot(data.Dataset):
                             for sublist in self.query_x_batch[index] for item in sublist]).astype(np.int32)
 
         unique = np.unique(support_y)
+        
         random.shuffle(unique)
         # relative means the label ranges from 0 to n-way
         support_y_relative = np.zeros(self.setsz)
         query_y_relative = np.zeros(self.querysz)
+        
+        count_unique,count = np.unique(support_y,return_counts=True)
+        data_count = dict(zip(count_unique,count))
+
+        for i in count_unique:
+            while data_count[i] < 5:
+
+                indices = np.where(support_y == i)[0]
+
+                flatten_support_x.append(flatten_support_x[random.choice(indices)])
+                support_y = np.append(support_y,[i])
+                data_count[i] += 1 
+            
         for idx, l in enumerate(unique):
+
             support_y_relative[support_y == l] = idx
             query_y_relative[query_y == l] = idx
 
-        for i, path in enumerate(flatten_support_x):
-            support_x[i] = self.transform(path)
+        i = 0
+        if len(flatten_support_x) < self.setsz:
+            
+            for _, path in enumerate(flatten_support_x):
+                
+                if path in flatten_support_x[:i]:
+                    support_x[i] = self.transform(path)
+                    i = i + 1
+                else:
+                    support_x[i] = self.origin_transform(path)
+                    i = i + 1
+                
+        else:
+            for _, path in enumerate(flatten_support_x):
 
+                support_x[i] = self.origin_transform(path)
+                i = i + 1
         for i, path in enumerate(flatten_query_x):
-            query_x[i] = self.transform(path)
+
+            query_x[i] = self.origin_transform(path)
 
         # unlabel
         # [setsz, 3, resize, resize]
@@ -237,12 +287,35 @@ class datasetNShot(data.Dataset):
 
             flatten_unlabel_query_x = [item
                                for sublist in self.unlabel_query_x_batch[index] for item in sublist]
+            i = 0
 
-            for i, path in enumerate(flatten_unlabel_support_x):
-                unlabel_support_x[i] = self.transform(path)
+            if len(flatten_unlabel_support_x) < self.distractor_setsz:
+                
+                for _, path in enumerate(flatten_unlabel_support_x):
 
+                    unlabel_support_x[i] = self.origin_transform(path)
+                    i = i + 1
+                # print(i)
+                while i < (self.distractor_setsz):
+                    
+                    for _, path in enumerate(flatten_unlabel_support_x):
+                        # print(i)
+                        unlabel_support_x[i] = self.transform(path)
+                        i = i + 1
+                        if i == (self.distractor_setsz):
+                            break
+                        
+
+            else:
+                for _, path in enumerate(flatten_unlabel_support_x):
+
+                    unlabel_support_x[i] = self.origin_transform(path)
+                    i = i + 1
+                    
             for i, path in enumerate(flatten_unlabel_query_x):
-                unlabel_query_x[i] = self.transform(path)      
+                unlabel_query_x[i] = self.origin_transform(path)
+
+        # print(flatten_unlabel_support_x)
         if self.num_distractor:
             return support_x, torch.LongTensor(support_y_relative), query_x, torch.LongTensor(query_y_relative),unlabel_support_x, unlabel_query_x
         else:

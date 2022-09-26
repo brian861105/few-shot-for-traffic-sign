@@ -17,3 +17,11 @@ maml/
 metagan_runs/
 
 maml_runs/
+
+results_runs/
+
+mini_imagenet/
+
+GAN_test/
+
+model_results/

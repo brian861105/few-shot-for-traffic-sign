@@ -92,11 +92,13 @@ def test_data_gen(args):
                        n_way=args["n_way"],
                        img_c=args["img_c"],
                        k_shot=args["k_spt"],
-                       k_query=args["k_qry"],
+                       # k_query=args["k_qry"],
+                       k_query=15,
                        img_sz=args["img_sz"],
                        num_distractor=args["num_distractor"],                       
                        spy_distractor_num=args["spy_distractor_num"],
-                       qry_distractor_num=args["qry_distractor_num"],                                
+                       # qry_distractor_num=args["qry_distractor_num"],   
+                       qry_distractor_num=15,                            
                        train=False)
 
 
@@ -105,11 +107,13 @@ def test_data_gen(args):
                        n_way=args["n_way"],
                        img_c=args["img_c"],
                        k_shot=args["k_spt"],
-                       k_query=args["k_qry"],
+                       # k_query=args["k_qry"],
+                       k_query=15,
                        img_sz=args["img_sz"],
                        num_distractor=args["num_distractor"],                       
                        spy_distractor_num=args["spy_distractor_num"],
-                       qry_distractor_num=args["qry_distractor_num"],                              
+                       # qry_distractor_num=args["qry_distractor_num"],   
+                       qry_distractor_num=15,
                        train=False)
 
 
